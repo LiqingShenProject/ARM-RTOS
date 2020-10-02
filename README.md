@@ -1,5 +1,5 @@
 # ARM-RTOS
-This example runs on core
+This example runs on on-chip 32-bit, 200-MHz ARM926EJ-S core CPU.
 An RTOS kernel is employed and thus the code mainly creates a thread for the RTOS scheduler
 The control data is sent by creating SPI and I2C channel.
 The high speed data is sent by bulk endpoint by creating a auto DMA channel. 
