@@ -5,3 +5,4 @@ The control data is sent by creating SPI and I2C channel.
 The high speed data is sent by bulk endpoint by creating a auto DMA channel. 
 The high speed bus is a proprietary bus protocol developed by GPIF designer.
 This application can be used to transfer control data and high speed data between USB host to main devices such as FPGA, image sensors and etc.
+The IDE is eclipsed based EZUSB provide Cypress now part of Infineon. 
