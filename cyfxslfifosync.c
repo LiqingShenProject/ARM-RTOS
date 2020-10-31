@@ -1,12 +1,14 @@
 /*
  * This example shows the both DMA and GPIO mode of SPI communication
- * It also use I2C communication. A UART communication is
- *
- *
- *
- *
- *
+ * It also use I2C communication. A UART communication is used for debug print
+ * SPI DMA mode interface is used to send control endpoint 0 request from PC software
+ * A bulkout endpoint 0x01 and bulkin endpoint 0x81 are established which allow PC software
+ * stream bulk data. A GPIF parallel bus is designed to stream in/out the bulk data to
+ * the external FPGA devices
+ * I2C interface is used for PC software to communicate with external EEPROM memory
+ * SPI GPIO mode is used to download the configuration data the the flash chip connected to the FPGA
  * */
+
 #include "cyu3system.h"
 #include "cyu3os.h"
 #include "cyu3dma.h"
@@ -21,7 +23,7 @@
 #include <cyu3gpio.h>
 #include "cyfxgpif_syncsf.h"
 
-CyU3PThread slFifoAppThread;	        /* Slave FIFO application thread structure */
+CyU3PThread slFifoAppThread;	        /* application thread structure */
 CyU3PDmaChannel glChHandleSlFifoUtoP;   /* DMA Channel handle for U2P transfer. */
 CyU3PDmaChannel glChHandleSlFifoPtoU;   /* DMA Channel handle for P2U transfer. */
 CyU3PDmaChannel glSpiTxHandle, glSpiRxHandle;   // SPI channel handles
@@ -31,8 +33,6 @@ CyBool_t glIsApplnActive = CyFalse;      /* Whether the loopback application is 
 uint8_t glEp0Buffer[16384] __attribute__ ((aligned (32))); /* Local buffer used for vendor command handling. */
 uint16_t glSpiPageSize = 0x100;  /* SPI Page size to be used for transfers. */
 uint16_t glI2cPageSize = 0x100;   /* I2C Page size to be used for transfers. */
-//CyU3PDmaChannel glI2cTxHandle;   /* I2C Tx channel handle */
-//CyU3PDmaChannel glI2cRxHandle;   /* I2C Rx channel handle */
 const uint8_t glFirmwareID[32]  __attribute__ ((aligned (32))) = { 'F', 'X', '3', ' ', '1', '0', '1', '\0' };// firmware Revision
 const uint32_t maxStartByteAddress = 0x7FFF00;
 const uint16_t maxPageAddress = 0x7FF;
@@ -839,6 +839,7 @@ CyU3PReturnStatus_t CyFxSpiTransfer (
 
 /***************************Bulk IN & out app definition**********************************************/
 /* DMA callback function to handle the produce events for U to P transfers. */
+// Since we use AUTO DMA, this CB function is not called
 void
 CyFxSlFifoUtoPDmaCallback (
         CyU3PDmaChannel   *chHandle,
@@ -856,19 +857,6 @@ CyFxSlFifoUtoPDmaCallback (
          * is a bus reset / usb disconnect or if there is any application error. */
      	CyU3PDmaBuffer_t dmaBuffer;
      	CyU3PDmaChannelGetBuffer(chHandle, &dmaBuffer, CYU3P_NO_WAIT);
-// modifying entire buffer will time out the call back function
-     	/*     	for (uint8_t i =0; i< dmaBuffer.count; i++ )
-     	{
-     		switch (i%0x04)
-     		{
-     		case 0x00: dmaBuffer.buffer[i] = 0x78; break;
-     		case 0x01: dmaBuffer.buffer[i] = 0x56; break;
-     		case 0x02: dmaBuffer.buffer[i] = 0x34; break;
-     		case 0x03: dmaBuffer.buffer[i] = 0x12; break;
-     		}
-     	}
-
-*/
      	CyU3PDmaChannelSetupSendBuffer (chHandle, &dmaBuffer);
      	status = CyU3PDmaChannelCommitBuffer (chHandle, dmaBuffer.count, 0);
     	if (status != CY_U3P_SUCCESS)
@@ -879,6 +867,7 @@ CyFxSlFifoUtoPDmaCallback (
 }
 
 /* DMA callback function to handle the produce events for P to U transfers. */
+// Since we use AUTO DMA, this CB function is not called
 void
 CyFxSlFifoPtoUDmaCallback (
         CyU3PDmaChannel   *chHandle,
@@ -906,7 +895,7 @@ CyFxSlFifoPtoUDmaCallback (
     }
 }
 
-/* This function starts the slave FIFO loop application. This is called
+/* This function starts the application. This is called
  * when a SET_CONF event is received from the USB host. The endpoints
  * are configured and the DMA pipe is setup in this function. */
 void
@@ -1039,7 +1028,7 @@ CyFxSlFifoApplnStart (
 	CyU3PGpioSetValue (FPGA_PROGRAM, CyFalse);
 }
 
-/* This function stops the slave FIFO loop application. This shall be called
+/* This function stops the application. This shall be called
  * whenever a RESET or DISCONNECT event is received from the USB host. The
  * endpoints are disabled and the DMA pipe is destroyed by this function. */
 void
@@ -1171,7 +1160,7 @@ CyFxSlFifoApplnUSBSetupCB (
             }
         }
     }
-    // customized for me
+    // customized request for SPI GPIO, and I2C data
     CyBool_t gpioValue = CyFalse;
     CyU3PGpioGetValue (FPGA_PROGRAM, &gpioValue); // read FPGA program signal
     if (bType == CY_U3P_USB_VENDOR_RQT)
@@ -1604,13 +1593,7 @@ SlFifoAppThread_Entry (
 
     for (;;)
     {
-        CyU3PThreadSleep (1000);
-        if (glIsApplnActive)
-        {
-            /* Print the number of buffers received so far from the USB host. */
-          //  CyU3PDebugPrint (6, "Data tracker: buffers received: %d, buffers sent: %d.\n",
-          //          glDMARxCount, glDMATxCount);
-        }
+        CyU3PThreadSleep (1000); // delay
     }
 }
 

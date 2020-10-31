@@ -20,8 +20,7 @@
  ## ===========================
 */
 
-/* This file contains the USB enumeration descriptors for the slave FIFO application example.
- * The descriptor arrays must be 32 byte aligned and multiple of 32 bytes if the D-cache is
+/* The descriptor arrays must be 32 byte aligned and multiple of 32 bytes if the D-cache is
  * turned on. If the linker used is not capable of supporting the aligned feature for this,
  * either the descriptors must be placed in a different section and the section should be 
  * 32 byte aligned and 32 byte multiple; or dynamically allocated buffer allocated using
